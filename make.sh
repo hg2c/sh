@@ -19,6 +19,7 @@ fn:mock bar
 fn:mock zoo
 
 all() {
+    echo $1
     fn:run foo bar zoo
 }
 
@@ -30,3 +31,9 @@ fn:run() {
 }
 
 fn:run $*
+
+all 1
+
+JAVA=${JAVA:-}
+
+echo "1${JAVA}1"
