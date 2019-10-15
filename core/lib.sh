@@ -12,7 +12,7 @@ assert:notEmpty() {
 }
 
 logger:run() {
-    echo "[RUN] $*" && "$*"
+    echo "[RUN] $*" && eval "$*"
     return_value=$?
     if [ "$return_value" != "0" ]; then
         echo "FAIL: \"$*\" STOPPED WITH EXIT CODE $return_value."
