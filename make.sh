@@ -37,3 +37,17 @@ all 1
 JAVA=${JAVA:-}
 
 echo "1${JAVA}1"
+
+
+
+__usage="
+Usage: $(basename $0) [OPTIONS]
+
+Options:
+  -l, --level <n>              Something something something level
+  -n, --nnnnn <levels>         Something something something n
+  -h, --help                   Something something something help
+  -v, --version                Something something something version
+"
+
+echo "$__usage"

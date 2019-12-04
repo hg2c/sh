@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-export SSD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 assert:notEmpty() {
     local var=$(eval echo \$$1)
@@ -9,6 +8,10 @@ assert:notEmpty() {
     else
         echo "ECHO: $1=$var"
     fi
+}
+
+assert:defined() {
+    echo
 }
 
 logger:run() {
