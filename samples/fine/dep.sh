@@ -43,6 +43,29 @@ dep:import:line() {
     fi
 }
 
+dep:foreach() {
+    while IFS= read -r line; do
+        local pkg=$(echo $line | cut -d '=' -f 1)
+        local ver=${line#$pkg=}
+
+        dep:$1:line "$pkg" "$ver" "$line"
+    done < ${DEP_LOCKFILE}
+}
+
+dep:update() {
+    dep:foreach update
+}
+
+dep:update:line() {
+    local path=./vendor/$1
+    if [ -d "$path" ]; then
+        echo "$path updating..."
+        cd $path
+        git pull
+    else
+        echo "$path not exists, skip."
+    fi
+}
 
 case ${1:-} in
     i|install)
@@ -50,7 +73,7 @@ case ${1:-} in
         ;;
 
     u|update)
-        echo TODO update
+        dep:update
         ;;
 
     *)
