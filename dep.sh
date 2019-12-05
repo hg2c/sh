@@ -3,12 +3,14 @@
 DEP_LOCKFILE=.dep.lock
 
 dep:foreach() {
-    while IFS= read -r line; do
-        local pkg=$(echo $line | cut -d '=' -f 1)
-        local ver=${line#$pkg=}
+    if [ -s ${DEP_LOCKFILE} ]; then
+        while IFS= read -r line; do
+            local pkg=$(echo $line | cut -d '=' -f 1)
+            local ver=${line#$pkg=}
 
-        dep:$1:line "$pkg" "$ver" "$line"
-    done < ${DEP_LOCKFILE}
+            dep:$1:line "$pkg" "$ver" "$line"
+        done < ${DEP_LOCKFILE}
+    fi
 }
 
 dep:install() {
@@ -25,6 +27,9 @@ dep:update() {
 }
 
 dep:install:line() {
+    : ${1:?"pkg is required"}
+    : ${2:?"ver is required"}
+
     local pkg=$1
     local ver=$2
     local path=./vendor/$pkg
