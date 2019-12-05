@@ -15,11 +15,11 @@ assert:defined() {
 }
 
 logger:run() {
-    echo "[RUN] $*" && eval "$*"
+    echo "[INFO] RUN: $*" && eval "$*"
     return_value=$?
     if [ "$return_value" != "0" ]; then
-        echo "FAIL: \"$*\" STOPPED WITH EXIT CODE $return_value."
-        exit 127
+        echo "[ERROR] \"$*\" STOPPED WITH EXIT CODE $return_value."
+        exit $return_value
     fi
 }
 

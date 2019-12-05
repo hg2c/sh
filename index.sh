@@ -10,6 +10,7 @@ setup() {
     source $_LIB/core/lib.sh
     source $_LIB/core/profile.sh
     source $_LIB/core/test.sh
+    source $_LIB/core/java.sh
 }
 
 setup

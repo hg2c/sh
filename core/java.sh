@@ -27,5 +27,5 @@ install:pom() {
 }
 
 mvn:install-file() {
-    mvn install:install-file -DpomFile=$1 -Dfile=$2 -Dpackaging=$3 ${MVN_OPTS}
+    logger:run mvn install:install-file -DpomFile=$1 -Dfile=$2 -Dpackaging=$3 ${MVN_OPTS}
 }
