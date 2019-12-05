@@ -2,19 +2,31 @@
 # NOTICE: No newline at end of file DEP_LOCKFILE will break dep funcs
 DEP_LOCKFILE=.dep.lock
 
-dep:install() {
-    mkdir -p vendor
-
+dep:foreach() {
     while IFS= read -r line; do
-        echo install $line
-        dep:install:line $line
+        local pkg=$(echo $line | cut -d '=' -f 1)
+        local ver=${line#$pkg=}
+
+        dep:$1:line "$pkg" "$ver" "$line"
     done < ${DEP_LOCKFILE}
 }
 
+dep:install() {
+    mkdir -p vendor
+    dep:foreach install
+}
+
+dep:import() {
+    dep:foreach import
+}
+
+dep:update() {
+    dep:foreach update
+}
+
 dep:install:line() {
-    local line=$*
-    local pkg=$(echo $line | cut -d '=' -f 1)
-    local ver=${line#$pkg=}
+    local pkg=$1
+    local ver=$2
     local path=./vendor/$pkg
     local cmd="git clone $ver $path"
     if [ ! -d "$path" ]; then
@@ -25,16 +37,8 @@ dep:install:line() {
     fi
 }
 
-dep:import() {
-    while IFS= read -r line; do
-        echo import $line
-        dep:import:line $line
-    done < ${DEP_LOCKFILE}
-}
-
 dep:import:line() {
-    local line=$*
-    local pkg=$(echo $line | cut -d '=' -f 1)
+    local pkg=$1
     local path=./vendor/$pkg
     if [ -d "$path" ]; then
         source $path/index.sh
@@ -43,25 +47,11 @@ dep:import:line() {
     fi
 }
 
-dep:foreach() {
-    while IFS= read -r line; do
-        local pkg=$(echo $line | cut -d '=' -f 1)
-        local ver=${line#$pkg=}
-
-        dep:$1:line "$pkg" "$ver" "$line"
-    done < ${DEP_LOCKFILE}
-}
-
-dep:update() {
-    dep:foreach update
-}
-
 dep:update:line() {
     local path=./vendor/$1
     if [ -d "$path" ]; then
         echo "$path updating..."
-        cd $path
-        git pull
+        git -C $path pull
     else
         echo "$path not exists, skip."
     fi
