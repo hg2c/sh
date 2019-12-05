@@ -3,11 +3,11 @@
 mvn:install:dir() {
     find ${1:-vendor} -name "*.pom" -print0 |
         while IFS= read -r -d '' POM; do
-            install:pom $POM
+            mvn:install-pom $POM
             done
 }
 
-install:pom() {
+mvn:install-pom() {
     local POM=$1
     local JAR
 
