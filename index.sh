@@ -5,7 +5,7 @@
 # TODO mv to config.sh
 setup:defaults() {
     GLOBAL_INTERACTIVE=${GLOBAL_INTERACTIVE:-0}
-    VERBOSE=$(VERBOSE:-false)
+    VERBOSE=${VERBOSE:-false}
     DRYRUN=${DRYRUN:-false}
 }
 
