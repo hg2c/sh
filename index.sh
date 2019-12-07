@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
+
+# https://google.github.io/styleguide/shell.xml
+
+# TODO mv to config.sh
 setup:defaults() {
     GLOBAL_INTERACTIVE=${GLOBAL_INTERACTIVE:-0}
+    VERBOSE=$(VERBOSE:-false)
+    DRYRUN=${DRYRUN:-false}
 }
 
 setup() {

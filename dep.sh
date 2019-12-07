@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
+
+SSD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+readonly SSD
+
 # NOTICE: No newline at end of file DEP_LOCKFILE will break dep funcs
 DEP_LOCKFILE=.dep.lock
+VENDOR=$SSD/vendor
+readonly VENDOR
 
 dep:foreach() {
     if [ -s ${DEP_LOCKFILE} ]; then

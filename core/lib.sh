@@ -15,6 +15,10 @@ assert:defined() {
 }
 
 logger:run() {
+    if [[ ${DRYRUN:-false} != true ]]; then
+        eval ${COMMAND_LINE}
+    fi
+
     echo "[INFO] RUN: $*" && eval "$*"
     return_value=$?
     if [ "$return_value" != "0" ]; then
