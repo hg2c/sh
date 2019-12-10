@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 mvn:install:dir() {
-    find ${1:-vendor} -name "*.pom" -print0 |
+    find ${1:-vendor} -name "*.pom" ${2:-} -print0 |
         while IFS= read -r -d '' POM; do
             mvn:install-pom $POM
             done
