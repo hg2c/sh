@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
+# https://www.gnu.org/software/bash/manual/html_node/The-Set-Builtin.html
 set -euo pipefail
 
-GLOBAL_INTERACTIVE=1
-ACTIVE_PROFILE_FILE=./.profile
-DEFAULT_PROFILE=3
-
+source ./config.sh
 source ./dep.sh
 
 SSD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
