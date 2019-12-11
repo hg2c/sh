@@ -13,10 +13,10 @@ setup() {
     setup:defaults
 
     local _LIB="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-    source $_LIB/core/lib.sh
-    source $_LIB/core/profile.sh
-    source $_LIB/core/test.sh
-    source $_LIB/core/java.sh
+    source $_LIB/lib/lib.sh
+    source $_LIB/lib/profile.sh
+    source $_LIB/lib/test.sh
+    source $_LIB/lib/java.sh
 }
 
 setup
