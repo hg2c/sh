@@ -2,7 +2,7 @@
 
 export SH_MODULES="java osx"
 
-DEP_MODE=${DEP_MODE:-single}
+DEP_MODE=${DEP_MODE:-file}
 DEP_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 DEP_LOCK=${DEP_HOME}/.dep.lock
@@ -28,10 +28,10 @@ dep::foreach() {
 dep::package::path() {
     : ${1:?"pkg is required"}
 
-    if [ "${DEP_MODE}" = "normal" ]; then
-        echo ${DEP_VENDOR}/$pkg
-    else
+    if [ "${DEP_MODE}" = "file" ]; then
         echo ~/.dep.sh/cache/$pkg
+    else
+        echo ${DEP_VENDOR}/$pkg
     fi
 }
 
