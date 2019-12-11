@@ -1,45 +1,69 @@
 #!/usr/bin/env bash
 
-SSD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-readonly SSD
+export SH_MODULES="java osx"
 
-# NOTICE: No newline at end of file DEP_LOCKFILE will break dep funcs
-DEP_LOCKFILE=.dep.lock
-VENDOR=$SSD/vendor
-readonly VENDOR
+DEP_MODE=${DEP_MODE:-single}
+DEP_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
-dep:foreach() {
-    if [ -s ${DEP_LOCKFILE} ]; then
+DEP_LOCK=${DEP_HOME}/.dep.lock
+# NOTICE: No newline at end of file DEP_LOCK will break dep funcs
+DEP_VENDOR=${DEP_HOME}/vendor
+
+readonly DEP_HOME
+readonly DEP_LOCK
+readonly DEP_VENDOR
+
+
+dep::foreach() {
+    if [ -s ${DEP_LOCK} ]; then
         while IFS= read -r line; do
             local pkg=$(echo $line | cut -d '=' -f 1)
             local ver=${line#$pkg=}
 
-            dep:$1:line "$pkg" "$ver" "$line"
-        done < ${DEP_LOCKFILE}
+            dep::$1::line "$pkg" "$ver" "$line"
+        done < ${DEP_LOCK}
     fi
 }
 
-dep:install() {
-    mkdir -p vendor
-    dep:foreach install
+dep::package::path() {
+    : ${1:?"pkg is required"}
+
+    if [ "${DEP_MODE}" = "normal" ]; then
+        echo ${DEP_VENDOR}/$pkg
+    else
+        echo ~/.dep.sh/cache/$pkg
+    fi
 }
 
-dep:import() {
-    dep:foreach import
+dep::package::setup() {
+    local setup=$1/setup.sh
+    [ -s $setup ] && $setup $DEP_HOME
 }
 
-dep:update() {
-    dep:foreach update
+
+dep::install() {
+    dep::foreach install
 }
 
-dep:install:line() {
+dep::import() {
+    dep::foreach import
+}
+
+dep::update() {
+    dep::foreach update
+}
+
+
+
+dep::install::line() {
     : ${1:?"pkg is required"}
     : ${2:?"ver is required"}
 
     local pkg=$1
     local ver=$2
-    local path=./vendor/$pkg
+    local path=$(dep::package::path $pkg)
     local cmd="git clone $ver $path"
+    echo $cmd
     if [ ! -d "$path" ]; then
         echo "$pkg installing... ($cmd)"
         $cmd
@@ -48,9 +72,25 @@ dep:install:line() {
     fi
 }
 
-dep:import:line() {
+dep::install::line0() {
+    : ${1:?"pkg is required"}
+    : ${2:?"ver is required"}
+
     local pkg=$1
-    local path=./vendor/$pkg
+    local ver=$2
+    local path=${DEP_VENDOR}/$pkg
+    local cmd="git clone $ver $path"
+    if [ ! -d "$path" ]; then
+        echo "$pkg installing... ($cmd)"
+        # $cmd
+    else
+        echo "$pkg exists, skip."
+    fi
+}
+
+
+dep::import::line() {
+    local path=$(dep::package::path $1)
     if [ -d "$path" ]; then
         source $path/index.sh
     else
@@ -58,11 +98,13 @@ dep:import:line() {
     fi
 }
 
-dep:update:line() {
-    local path=./vendor/$1
+dep::update::line() {
+    local path=$(dep::package::path $1)
     if [ -d "$path" ]; then
         echo "$path updating..."
         git -C $path pull
+
+        dep::package::setup $path
     else
         echo "$path not exists, skip."
     fi
@@ -70,14 +112,14 @@ dep:update:line() {
 
 case ${1:-} in
     i|install)
-        dep:install
+        dep::install
         ;;
 
     u|update)
-        dep:update
+        dep::update
         ;;
 
     *)
-        dep:import
+        dep::import
         ;;
 esac
