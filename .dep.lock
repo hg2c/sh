@@ -1,0 +1,2 @@
+sh=https://github.com/hg2c/sh.git -b master
+ut=https://github.com/hg2c/ut.git -b v2.1.0

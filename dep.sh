@@ -2,7 +2,7 @@
 
 export SH_MODULES="java osx"
 
-DEP_MODE=${DEP_MODE:-file}
+DEP_MODE=${DEP_MODE:-}
 DEP_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
 DEP_LOCK=${DEP_HOME}/.dep.lock
@@ -14,18 +14,35 @@ readonly DEP_LOCK
 readonly DEP_VENDOR
 
 
-dep::foreach() {
-    if [ -s ${DEP_LOCK} ]; then
-        while IFS= read -r line; do
-            local pkg=$(echo $line | cut -d '=' -f 1)
-            local ver=${line#$pkg=}
+list:foreach() {
+    local list=$1
+    local func=${2:-echo}
 
-            dep::$1::line "$pkg" "$ver" "$line"
-        done < ${DEP_LOCK}
+    [ ! -z "$list" ] && while IFS= read -r line; do
+        $func "$line"
+    done << EOF
+$list
+EOF
+}
+
+dep:parse() {
+    local line=$1
+    local pkg=$(echo $line | cut -d '=' -f 1)
+    local ver=${line#$pkg=}
+    printf '%s|%s|%s\n' "$line" "$pkg" "$ver"
+}
+
+dep:config:packages() {
+    if [ -s ${DEP_LOCK} ]; then
+        cat ${DEP_LOCK}
     fi
 }
 
-dep::package::path() {
+dep:foreach() {
+    list:foreach "$(dep:config:packages)" dep:parse
+}
+
+dep:package:path() {
     : ${1:?"pkg is required"}
 
     if [ "${DEP_MODE}" = "file" ]; then
@@ -35,7 +52,7 @@ dep::package::path() {
     fi
 }
 
-dep::package::setup() {
+dep:package:setup() {
     local pkg=$1
     local packagedFile=${DEP_HOME}/.dep.vendor.sh
 
@@ -47,27 +64,27 @@ dep::package::setup() {
 }
 
 
-dep::install() {
-    dep::foreach install
+dep:install() {
+    dep:foreach install
 }
 
-dep::import() {
-    dep::foreach import
+dep:import() {
+    dep:foreach import
 }
 
-dep::update() {
-    dep::foreach update
+dep:update() {
+    dep:foreach update
 }
 
 
 
-dep::install::line() {
+dep:install:line() {
     : ${1:?"pkg is required"}
     : ${2:?"ver is required"}
 
     local pkg=$1
     local ver=$2
-    local path=$(dep::package::path $pkg)
+    local path=$(dep:package:path $pkg)
     local cmd="git clone $ver $path"
     echo $cmd
     if [ ! -d "$path" ]; then
@@ -78,8 +95,8 @@ dep::install::line() {
     fi
 }
 
-dep::import::line() {
-    local path=$(dep::package::path $1)
+dep:import:line() {
+    local path=$(dep:package:path $1)
     if [ -d "$path" ]; then
         source $path/index.sh
     else
@@ -87,13 +104,13 @@ dep::import::line() {
     fi
 }
 
-dep::update::line() {
-    local path=$(dep::package::path $1)
+dep:update:line() {
+    local path=$(dep:package:path $1)
     if [ -d "$path" ]; then
         echo "$path updating..."
-        # git -C $path pull
+        git -C $path pull
 
-        dep::package::setup $path
+        dep:package:setup $path
     else
         echo "$path not exists, skip."
     fi
@@ -101,14 +118,14 @@ dep::update::line() {
 
 case ${1:-} in
     i|install)
-        dep::install
+        dep:install
         ;;
 
     u|update)
-        dep::update
+        dep:update
         ;;
 
     *)
-        dep::import
+        dep:import
         ;;
 esac
