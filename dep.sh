@@ -36,8 +36,14 @@ dep::package::path() {
 }
 
 dep::package::setup() {
-    local setup=$1/setup.sh
-    [ -s $setup ] && $setup $DEP_HOME
+    local pkg=$1
+    local packagedFile=${DEP_HOME}/.dep.vendor.sh
+
+    echo -e "# Auto generate by dep.sh\n" > $packagedFile
+    for file in $pkg/lib/*.sh ; do
+        sed /^#.*/d $file >> $packagedFile
+        echo "pack $file to $packagedFile"
+    done
 }
 
 
@@ -72,23 +78,6 @@ dep::install::line() {
     fi
 }
 
-dep::install::line0() {
-    : ${1:?"pkg is required"}
-    : ${2:?"ver is required"}
-
-    local pkg=$1
-    local ver=$2
-    local path=${DEP_VENDOR}/$pkg
-    local cmd="git clone $ver $path"
-    if [ ! -d "$path" ]; then
-        echo "$pkg installing... ($cmd)"
-        # $cmd
-    else
-        echo "$pkg exists, skip."
-    fi
-}
-
-
 dep::import::line() {
     local path=$(dep::package::path $1)
     if [ -d "$path" ]; then
@@ -102,7 +91,7 @@ dep::update::line() {
     local path=$(dep::package::path $1)
     if [ -d "$path" ]; then
         echo "$path updating..."
-        git -C $path pull
+        # git -C $path pull
 
         dep::package::setup $path
     else
