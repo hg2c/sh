@@ -14,7 +14,7 @@ readonly DEP_LOCK
 readonly DEP_VENDOR
 
 
-list:foreach() {
+each:line() {
     local list=$1
     local func=${2:-echo}
 
@@ -39,7 +39,7 @@ dep:config:packages() {
 }
 
 dep:foreach() {
-    list:foreach "$(dep:config:packages)" dep:parse
+    each:line "$(dep:config:packages)" dep:parse
 }
 
 dep:package:path() {
