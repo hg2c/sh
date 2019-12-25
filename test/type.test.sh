@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-source ./type.sh
+source ./lib/type.sh
 
 multiline1=$(cat <<-END
     This is line one.
@@ -19,7 +19,7 @@ multiline2="
 NO=0
 test:each() {
     NO=$((NO + 1))
-    printf '%s\n' "$NO|$1"
+    echo "$NO|$1"
 }
 
 list:each "$(cat <<-END
