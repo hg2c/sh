@@ -20,7 +20,7 @@ mod_check_def() {
         mod_err "warn: $MOD_DEF not exist."
 }
 
-mod_download() {
+dep::download::line() {
     local pkg=$1
     local repo=$2
     local path=$MOD_VENDOR/$pkg
@@ -36,7 +36,6 @@ mod_download() {
 
 
 dep::foreach() {
-    mod_check_def
     while IFS= read -r line; do
         local pkg=$(echo $line | cut -d '=' -f 1)
         local ver=${line#$pkg=}
@@ -45,19 +44,13 @@ dep::foreach() {
     done < ${MOD_DEF}
 }
 
-dep::package::setup() {
-    local pkg=$1
-    local packagedFile=${MOD_HOME}/.dep.vendor.sh
-
-    echo -e "# Auto generate by dep.sh\n" > $packagedFile
-}
-
 dep::install() {
     if [ "${MOD_TYPE}" = "file" ]; then
         echo -e "# Auto generate by dep.sh\n" > $MOD_VENDOR_FILE
     fi
 
-    dep::foreach install
+    dep::foreach download
+    dep::foreach pack
 }
 
 dep::import() {
@@ -71,19 +64,21 @@ dep::import() {
 
 dep::update() {
     dep::foreach update
+    dep::foreach pack
 }
 
 dep::install::line() {
     mod_download $1 $2
-
-    if [ "${MOD_TYPE}" = "file" ]; then
-        local lib=$MOD_VENDOR/$1/lib
-        for file in $lib/*.sh ; do
-            sed /^#.*/d $file >> $MOD_VENDOR_FILE
-            echo "pack $file to $MOD_VENDOR_FILE"
-        done
-    fi
 }
+
+dep::pack::line() {
+    local lib=$MOD_VENDOR/$1/lib
+    for file in $lib/*.sh ; do
+        sed /^#.*/d $file >> $MOD_VENDOR_FILE
+        echo "pack $file to $MOD_VENDOR_FILE"
+    done
+}
+
 
 dep::import::line() {
     local path=$(dep::package::path $1)
@@ -95,16 +90,16 @@ dep::import::line() {
 }
 
 dep::update::line() {
-    local path=$(dep::package::path $1)
+    local path=$MOD_VENDOR/$1
     if [ -d "$path" ]; then
         echo "$path updating..."
-        # git -C $path pull
-
-        dep::package::setup $path
+        cd $path && git pull
     else
         echo "$path not exists, skip."
     fi
 }
+
+mod_check_def
 
 case ${1:-} in
     i|install)
