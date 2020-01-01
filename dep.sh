@@ -1,80 +1,87 @@
 #!/usr/bin/env bash
+MOD_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+MOD_DEF=${MOD_HOME}/sh.mod
+MOD_TYPE=${MOD_TYPE:-file}
+MOD_VENDOR_FILE=${MOD_HOME}/mod.vendor.sh
 
-export SH_MODULES="java osx"
+if [ "${MOD_TYPE}" = "file" ]; then
+    MOD_VENDOR=~/.mod.sh/cache
+else
+    MOD_VENDOR=${MOD_HOME}/vendor
+fi
 
-DEP_MODE=${DEP_MODE:-file}
-DEP_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
-DEP_LOCK=${DEP_HOME}/.dep.lock
-# NOTICE: No newline at end of file DEP_LOCK will break dep funcs
-DEP_VENDOR=${DEP_HOME}/vendor
-
-readonly DEP_HOME
-readonly DEP_LOCK
-readonly DEP_VENDOR
-
-
-dep::foreach() {
-    if [ -s ${DEP_LOCK} ]; then
-        while IFS= read -r line; do
-            local pkg=$(echo $line | cut -d '=' -f 1)
-            local ver=${line#$pkg=}
-
-            dep::$1::line "$pkg" "$ver" "$line"
-        done < ${DEP_LOCK}
-    fi
+mod_err() {
+    >&2 echo "$@"
+    exit 2
 }
 
-dep::package::path() {
-    : ${1:?"pkg is required"}
-
-    if [ "${DEP_MODE}" = "file" ]; then
-        echo ~/.dep.sh/cache/$pkg
-    else
-        echo ${DEP_VENDOR}/$pkg
-    fi
+mod_check_def() {
+    [ ! -s ${MOD_DEF} ] && \
+        mod_err "warn: $MOD_DEF not exist."
 }
 
-dep::package::setup() {
+mod_download() {
     local pkg=$1
-    local packagedFile=${DEP_HOME}/.dep.vendor.sh
-
-    echo -e "# Auto generate by dep.sh\n" > $packagedFile
-    for file in $pkg/lib/*.sh ; do
-        sed /^#.*/d $file >> $packagedFile
-        echo "pack $file to $packagedFile"
-    done
-}
-
-
-dep::install() {
-    dep::foreach install
-}
-
-dep::import() {
-    dep::foreach import
-}
-
-dep::update() {
-    dep::foreach update
-}
-
-
-
-dep::install::line() {
-    : ${1:?"pkg is required"}
-    : ${2:?"ver is required"}
-
-    local pkg=$1
-    local ver=$2
-    local path=$(dep::package::path $pkg)
-    local cmd="git clone $ver $path"
+    local repo=$2
+    local path=$MOD_VENDOR/$pkg
+    local cmd="git clone $repo $path"
     echo $cmd
     if [ ! -d "$path" ]; then
         echo "$pkg installing... ($cmd)"
         $cmd
     else
         echo "$pkg exists, skip."
+    fi
+}
+
+
+dep::foreach() {
+    mod_check_def
+    while IFS= read -r line; do
+        local pkg=$(echo $line | cut -d '=' -f 1)
+        local ver=${line#$pkg=}
+
+        dep::$1::line "$pkg" "$ver" "$line"
+    done < ${MOD_DEF}
+}
+
+dep::package::setup() {
+    local pkg=$1
+    local packagedFile=${MOD_HOME}/.dep.vendor.sh
+
+    echo -e "# Auto generate by dep.sh\n" > $packagedFile
+}
+
+dep::install() {
+    if [ "${MOD_TYPE}" = "file" ]; then
+        echo -e "# Auto generate by dep.sh\n" > $MOD_VENDOR_FILE
+    fi
+
+    dep::foreach install
+}
+
+dep::import() {
+    if [ "${MOD_TYPE}" = "file" ]; then
+        echo source $MOD_VENDOR_FILE
+        source $MOD_VENDOR_FILE
+    else
+        dep::foreach import
+    fi
+}
+
+dep::update() {
+    dep::foreach update
+}
+
+dep::install::line() {
+    mod_download $1 $2
+
+    if [ "${MOD_TYPE}" = "file" ]; then
+        local lib=$MOD_VENDOR/$1/lib
+        for file in $lib/*.sh ; do
+            sed /^#.*/d $file >> $MOD_VENDOR_FILE
+            echo "pack $file to $MOD_VENDOR_FILE"
+        done
     fi
 }
 

@@ -3,7 +3,7 @@
 set -euo pipefail
 
 source ./config.sh
-source ./dep.sh
+source ./mod
 
 SSD="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 assert:notEmpty SSD
