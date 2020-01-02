@@ -12,18 +12,23 @@ fi
 
 
 mod_install() {
-    if [ "${MOD_TYPE}" = "file" ]; then
-        echo -e "# Auto generate by dep.sh\n" > $MOD_VENDOR_FILE
-    fi
-
     mod_each download
-    mod_each pack
+    mod_pack
 }
 
 mod_update() {
     mod_each update
+    mod_pack
+}
+
+mod_pack() {
+    if [ "${MOD_TYPE}" = "file" ]; then
+        echo -e "# Auto generate by dep.sh\n" > $MOD_VENDOR_FILE
+    fi
+
     mod_each pack
 }
+
 
 mod_import() {
     if [ "${MOD_TYPE}" = "file" ]; then
@@ -62,7 +67,7 @@ mod_download_package() {
         echo "$name installing... ($cmd)"
         $cmd
     else
-        echo "$name exists, skip."
+        mod_err "$name exists, skip."
     fi
 }
 
@@ -72,7 +77,7 @@ mod_update_package() {
         echo "$path updating..."
         cd $path && git pull
     else
-        echo "$path not exists, skip."
+        mod_err "$path not exists, skip."
     fi
 }
 
@@ -89,7 +94,7 @@ mod_import_package() {
     if [ -d "$path" ]; then
         source $path/index.sh
     else
-        echo "$path not exists, skip."
+        mod_err "$path not exists, skip."
     fi
 }
 
