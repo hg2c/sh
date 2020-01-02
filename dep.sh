@@ -10,86 +10,63 @@ else
     MOD_VENDOR=${MOD_HOME}/vendor
 fi
 
+
+mod_install() {
+    if [ "${MOD_TYPE}" = "file" ]; then
+        echo -e "# Auto generate by dep.sh\n" > $MOD_VENDOR_FILE
+    fi
+
+    mod_each download
+    mod_each pack
+}
+
+mod_update() {
+    mod_each update
+    mod_each pack
+}
+
+mod_import() {
+    if [ "${MOD_TYPE}" = "file" ]; then
+        source $MOD_VENDOR_FILE
+    else
+        mod_each import
+    fi
+}
+
+
 mod_err() {
     >&2 echo "$@"
     exit 2
 }
 
 mod_check_def() {
-    [ ! -s ${MOD_DEF} ] && \
+    if [ ! -s ${MOD_DEF} ]; then
         mod_err "warn: $MOD_DEF not exist."
-}
-
-dep::download::line() {
-    local pkg=$1
-    local repo=$2
-    local path=$MOD_VENDOR/$pkg
-    local cmd="git clone $repo $path"
-    echo $cmd
-    if [ ! -d "$path" ]; then
-        echo "$pkg installing... ($cmd)"
-        $cmd
-    else
-        echo "$pkg exists, skip."
     fi
 }
 
-
-dep::foreach() {
+mod_each() {
     while IFS= read -r line; do
-        local pkg=$(echo $line | cut -d '=' -f 1)
-        local ver=${line#$pkg=}
-
-        dep::$1::line "$pkg" "$ver" "$line"
+        local name=$(echo $line | cut -d '=' -f 1)
+        local repo=${line#$name=}
+        mod_$1_package "$name" "$repo" "$line"
     done < ${MOD_DEF}
 }
 
-dep::install() {
-    if [ "${MOD_TYPE}" = "file" ]; then
-        echo -e "# Auto generate by dep.sh\n" > $MOD_VENDOR_FILE
-    fi
-
-    dep::foreach download
-    dep::foreach pack
-}
-
-dep::import() {
-    if [ "${MOD_TYPE}" = "file" ]; then
-        echo source $MOD_VENDOR_FILE
-        source $MOD_VENDOR_FILE
+mod_download_package() {
+    local name=$1
+    local repo=$2
+    local path=$MOD_VENDOR/$name
+    local cmd="git clone $repo $path"
+    if [ ! -d "$path" ]; then
+        echo "$name installing... ($cmd)"
+        $cmd
     else
-        dep::foreach import
+        echo "$name exists, skip."
     fi
 }
 
-dep::update() {
-    dep::foreach update
-    dep::foreach pack
-}
-
-dep::install::line() {
-    mod_download $1 $2
-}
-
-dep::pack::line() {
-    local lib=$MOD_VENDOR/$1/lib
-    for file in $lib/*.sh ; do
-        sed /^#.*/d $file >> $MOD_VENDOR_FILE
-        echo "pack $file to $MOD_VENDOR_FILE"
-    done
-}
-
-
-dep::import::line() {
-    local path=$(dep::package::path $1)
-    if [ -d "$path" ]; then
-        source $path/index.sh
-    else
-        echo "$path not exists, skip."
-    fi
-}
-
-dep::update::line() {
+mod_update_package() {
     local path=$MOD_VENDOR/$1
     if [ -d "$path" ]; then
         echo "$path updating..."
@@ -99,18 +76,36 @@ dep::update::line() {
     fi
 }
 
+mod_pack_package() {
+    local lib=$MOD_VENDOR/$1/lib
+    for file in $lib/*.sh ; do
+        sed /^#.*/d $file >> $MOD_VENDOR_FILE
+        echo "pack $file to $MOD_VENDOR_FILE"
+    done
+}
+
+mod_import_package() {
+    local path=$(dep::package::path $1)
+    if [ -d "$path" ]; then
+        source $path/index.sh
+    else
+        echo "$path not exists, skip."
+    fi
+}
+
+
 mod_check_def
 
 case ${1:-} in
     i|install)
-        dep::install
+        mod_install
         ;;
 
     u|update)
-        dep::update
+        mod_update
         ;;
 
     *)
-        dep::import
+        mod_import
         ;;
 esac
