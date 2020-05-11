@@ -1,28 +1,18 @@
 #!/usr/bin/env bash
+MOD_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+MOD_DEF=${MOD_HOME}/sh.mod
+MOD_TYPE=${MOD_TYPE:-file}
+MOD_VENDOR_FILE=${MOD_HOME}/mod.vendor.sh
 
-export SH_MODULES="java osx"
+if [ "${MOD_TYPE}" = "file" ]; then
+    MOD_VENDOR=~/.mod.sh/cache
+else
+    MOD_VENDOR=${MOD_HOME}/vendor
+fi
 
-DEP_MODE=${DEP_MODE:-}
-DEP_HOME="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-
-DEP_LOCK=${DEP_HOME}/.dep.lock
-# NOTICE: No newline at end of file DEP_LOCK will break dep funcs
-DEP_VENDOR=${DEP_HOME}/vendor
-
-readonly DEP_HOME
-readonly DEP_LOCK
-readonly DEP_VENDOR
-
-
-each:line() {
-    local list=$1
-    local func=${2:-echo}
-
-    [ ! -z "$list" ] && while IFS= read -r line; do
-        $func "$line"
-    done << EOF
-$list
-EOF
+mod_err() {
+    >&2 echo "$@"
+    exit 2
 }
 
 each:package() {
@@ -34,62 +24,17 @@ dep:parse() {
     local pkg=$(echo $line | cut -d '=' -f 1)
     local ver=${line#$pkg=}
     printf '%s|%s|%s\n' "$line" "$pkg" "$ver"
+
+mod_check_def() {
+    [ ! -s ${MOD_DEF} ] && \
+        mod_err "warn: $MOD_DEF not exist."
 }
 
-dep:config:packages() {
-    if [ -s ${DEP_LOCK} ]; then
-        cat ${DEP_LOCK}
-    fi
-}
-
-dep:foreach() {
-    each:package import
-    # each:line "$(dep:config:packages)" dep:parse
-}
-
-dep:package:path() {
-    : ${1:?"pkg is required"}
-
-    local pkg="$1"
-    echo "okg $pkg"
-
-    if [ "${DEP_MODE}" = "file" ]; then
-        echo ~/.dep.sh/cache/$pkg
-    else
-        echo ${DEP_VENDOR}/$pkg
-    fi
-}
-
-dep:package:setup() {
+dep::download::line() {
     local pkg=$1
-    local packagedFile=${DEP_HOME}/.dep.vendor.sh
-
-    echo -e "# Auto generate by dep.sh\n" > $packagedFile
-    for file in $pkg/lib/*.sh ; do
-        sed /^#.*/d $file >> $packagedFile
-        echo "pack $file to $packagedFile"
-    done
-}
-
-
-dep:install() {
-    dep:foreach install
-}
-
-dep:update() {
-    dep:foreach update
-}
-
-
-
-dep:install:line() {
-    : ${1:?"pkg is required"}
-    : ${2:?"ver is required"}
-
-    local pkg=$1
-    local ver=$2
-    local path=$(dep:package:path $pkg)
-    local cmd="git clone $ver $path"
+    local repo=$2
+    local path=$MOD_VENDOR/$pkg
+    local cmd="git clone $repo $path"
     echo $cmd
     if [ ! -d "$path" ]; then
         echo "$pkg installing... ($cmd)"
@@ -99,10 +44,77 @@ dep:install:line() {
     fi
 }
 
+dep:foreach() {
+    each:package import
+    # each:line "$(dep:config:packages)" dep:parse
+}
+
+dep::foreach() {
+    while IFS= read -r line; do
+        local pkg=$(echo $line | cut -d '=' -f 1)
+        local ver=${line#$pkg=}
+
+        local pkg="$1"
+    echo "okg $pkg"
+
+    if [ "${DEP_MODE}" = "file" ]; then
+        echo ~/.dep.sh/cache/$pkg
+    else
+        echo ${DEP_VENDOR}/$pkg
+    fi
+
+        dep::$1::line "$pkg" "$ver" "$line"
+    done < ${MOD_DEF}
+
+}
+
+dep::install() {
+    if [ "${MOD_TYPE}" = "file" ]; then
+        echo -e "# Auto generate by dep.sh\n" > $MOD_VENDOR_FILE
+    fi
+
+    dep::foreach download
+    dep::foreach pack
+}
+
+dep::import() {
+    if [ "${MOD_TYPE}" = "file" ]; then
+        echo source $MOD_VENDOR_FILE
+        source $MOD_VENDOR_FILE
+    else
+        dep::foreach import
+    fi
+}
+
+
+dep:update() {
+    dep:foreach update
+
+dep::update() {
+    dep::foreach update
+    dep::foreach pack
+}
+
+dep::install::line() {
+    mod_download $1 $2
+}
+
+dep::pack::line() {
+    local lib=$MOD_VENDOR/$1/lib
+    for file in $lib/*.sh ; do
+        sed /^#.*/d $file >> $MOD_VENDOR_FILE
+        echo "pack $file to $MOD_VENDOR_FILE"
+    done
+}
+
+
 dep:import() {
     echo 1
     echo $*
     local path=$(dep:package:path $1)
+
+dep::import::line() {
+    local path=$(dep::package::path $1)
     if [ -d "$path" ]; then
         source $path/index.sh
     else
@@ -111,28 +123,32 @@ dep:import() {
 
 }
 
-dep:update:line() {
-    local path=$(dep:package:path $1)
+dep::update::line() {
+    local path=$MOD_VENDOR/$1
     if [ -d "$path" ]; then
         echo "$path updating..."
-        git -C $path pull
-
-        dep:package:setup $path
+        cd $path && git pull
     else
         echo "$path not exists, skip."
     fi
 }
 
+mod_check_def
+
 case ${1:-} in
     i|install)
-        dep:install
+        dep::install
         ;;
 
     u|update)
-        dep:update
+        dep::update
         ;;
 
     *)
+
         each:package import
+
+        dep::import
+
         ;;
 esac
