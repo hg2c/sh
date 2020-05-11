@@ -25,6 +25,10 @@ $list
 EOF
 }
 
+each:package() {
+    each:line "$(dep:config:packages)" dep:$1
+}
+
 dep:parse() {
     local line=$1
     local pkg=$(echo $line | cut -d '=' -f 1)
@@ -39,11 +43,15 @@ dep:config:packages() {
 }
 
 dep:foreach() {
-    each:line "$(dep:config:packages)" dep:parse
+    each:package import
+    # each:line "$(dep:config:packages)" dep:parse
 }
 
 dep:package:path() {
     : ${1:?"pkg is required"}
+
+    local pkg="$1"
+    echo "okg $pkg"
 
     if [ "${DEP_MODE}" = "file" ]; then
         echo ~/.dep.sh/cache/$pkg
@@ -66,10 +74,6 @@ dep:package:setup() {
 
 dep:install() {
     dep:foreach install
-}
-
-dep:import() {
-    dep:foreach import
 }
 
 dep:update() {
@@ -95,13 +99,16 @@ dep:install:line() {
     fi
 }
 
-dep:import:line() {
+dep:import() {
+    echo 1
+    echo $*
     local path=$(dep:package:path $1)
     if [ -d "$path" ]; then
         source $path/index.sh
     else
         echo "$path not exists, skip."
     fi
+
 }
 
 dep:update:line() {
@@ -126,6 +133,6 @@ case ${1:-} in
         ;;
 
     *)
-        dep:import
+        each:package import
         ;;
 esac
